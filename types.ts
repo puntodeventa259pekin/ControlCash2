@@ -9,8 +9,9 @@ export type InvoiceValidationStatus = 'DRAFT' | 'VALIDATED';
 export interface DBConfig {
   server: string;
   database: string;
-  user: string;
-  password: string;
+  user?: string;
+  password?: string;
+  integratedSecurity?: boolean;
 }
 
 export interface User {

@@ -73,11 +73,19 @@ export const dbService = {
     
     return new Promise((resolve, reject) => {
       setTimeout(() => {
-        if (cfg.server && cfg.database && cfg.user && cfg.password) {
+        // Validate connection string components
+        // Either Integrated Security is ON, OR we have User/Pass
+        const hasAuth = cfg.integratedSecurity || (cfg.user && cfg.password);
+        
+        if (cfg.server && cfg.database && hasAuth) {
           // In a real app, this would perform a fetch('/api/check-db')
+          // Connection String Simulation:
+          // const connStr = cfg.integratedSecurity 
+          //    ? `Server=${cfg.server};Database=${cfg.database};Trusted_Connection=True;`
+          //    : `Server=${cfg.server};Database=${cfg.database};User Id=${cfg.user};Password=${cfg.password};`;
           resolve(true); 
         } else {
-          reject(new Error("Configuración inválida"));
+          reject(new Error("Configuración inválida o credenciales faltantes"));
         }
       }, 1500);
     });

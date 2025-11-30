@@ -1,6 +1,6 @@
 
-import React, { useState } from 'react';
-import { Database, Server, Save, Play, AlertTriangle, CheckCircle, Lock, User as UserIcon, Activity } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Database, Server, Save, Play, AlertTriangle, CheckCircle, Lock, User as UserIcon, Activity, ShieldCheck } from 'lucide-react';
 import { DBConfig } from '../types';
 
 interface DatabaseConfigProps {
@@ -12,7 +12,8 @@ export const DatabaseConfig: React.FC<DatabaseConfigProps> = ({ onConfigSaved })
     server: '',
     database: 'CashGuardDB',
     user: '',
-    password: ''
+    password: '',
+    integratedSecurity: false
   });
   const [status, setStatus] = useState<'IDLE' | 'TESTING' | 'INITIALIZING' | 'ERROR' | 'SUCCESS'>('IDLE');
   const [logs, setLogs] = useState<string[]>([]);
@@ -29,7 +30,17 @@ export const DatabaseConfig: React.FC<DatabaseConfigProps> = ({ onConfigSaved })
       await new Promise(resolve => setTimeout(resolve, 1000));
       addLog(`Conectando a ${config.server}...`);
       
-      if (!config.server || !config.user) throw new Error("Faltan credenciales");
+      // Validation Logic
+      if (!config.server) throw new Error("El servidor es obligatorio");
+      if (!config.integratedSecurity && (!config.user || !config.password)) {
+        throw new Error("Debe ingresar usuario y contraseña o usar Autenticación de Windows");
+      }
+
+      if (config.integratedSecurity) {
+        addLog("Usando Seguridad Integrada (Windows Auth)...");
+      } else {
+        addLog(`Autenticando usuario SQL '${config.user}'...`);
+      }
 
       addLog("Conexión TCP establecida.");
       addLog(`Verificando base de datos '${config.database}'...`);
@@ -108,18 +119,38 @@ export const DatabaseConfig: React.FC<DatabaseConfigProps> = ({ onConfigSaved })
                </div>
              </div>
 
-             <div className="grid grid-cols-2 gap-4">
+             {/* Windows Auth Toggle */}
+             <div className="py-2">
+               <label className="flex items-center gap-3 p-3 border border-slate-200 rounded-lg cursor-pointer hover:bg-slate-50 transition-colors">
+                 <div className={`w-5 h-5 rounded border flex items-center justify-center ${config.integratedSecurity ? 'bg-indigo-600 border-indigo-600' : 'border-slate-300 bg-white'}`}>
+                    {config.integratedSecurity && <CheckCircle size={14} className="text-white" />}
+                 </div>
+                 <input 
+                   type="checkbox" 
+                   className="hidden"
+                   checked={config.integratedSecurity || false}
+                   onChange={e => setConfig({...config, integratedSecurity: e.target.checked})}
+                 />
+                 <div className="flex items-center gap-2 text-sm font-medium text-slate-700">
+                   <ShieldCheck size={16} className="text-slate-400"/>
+                   Autenticación de Windows (Integrada)
+                 </div>
+               </label>
+             </div>
+
+             <div className={`grid grid-cols-2 gap-4 transition-opacity duration-200 ${config.integratedSecurity ? 'opacity-50 pointer-events-none' : 'opacity-100'}`}>
                <div>
-                 <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Usuario</label>
+                 <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Usuario SQL</label>
                  <div className="relative">
                    <UserIcon className="absolute left-3 top-3 text-slate-400" size={18} />
                    <input 
-                      required 
+                      required={!config.integratedSecurity}
                       type="text" 
                       placeholder="sa" 
-                      className="w-full pl-10 p-3 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none"
+                      className="w-full pl-10 p-3 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none disabled:bg-slate-100"
                       value={config.user}
                       onChange={e => setConfig({...config, user: e.target.value})}
+                      disabled={config.integratedSecurity}
                    />
                  </div>
                </div>
@@ -128,12 +159,13 @@ export const DatabaseConfig: React.FC<DatabaseConfigProps> = ({ onConfigSaved })
                  <div className="relative">
                    <Lock className="absolute left-3 top-3 text-slate-400" size={18} />
                    <input 
-                      required 
+                      required={!config.integratedSecurity}
                       type="password" 
                       placeholder="••••••" 
-                      className="w-full pl-10 p-3 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none"
+                      className="w-full pl-10 p-3 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none disabled:bg-slate-100"
                       value={config.password}
                       onChange={e => setConfig({...config, password: e.target.value})}
+                      disabled={config.integratedSecurity}
                    />
                  </div>
                </div>
